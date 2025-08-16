@@ -117,9 +117,10 @@
                   <div>
                     <strong>{t.title}</strong> <span className="badge">{t.status}</span> <span className="badge">{t.priority}</span>
                     <div className="muted">
-                      By {t.createdBy?.name || 'Unknown'} {t.assignedTo && (
-                        <React.Fragment>• Assigned to {t.assignedTo?.name}</React.Fragment>
-                      )}
+                      By {(t.createdBy && t.createdBy.name) ? t.createdBy.name : 'Unknown'}
+                      {t.assignedTo ? (
+                        <React.Fragment> • Assigned to {t.assignedTo.name}</React.Fragment>
+                      ) : null}
                     </div>
                   </div>
                   <button onClick={()=>onOpen(t._id)}>Open</button>
@@ -132,12 +133,12 @@
       );
     }
 
-    // ... rest of your components unchanged (TicketDetails, CustomerDashboard, AgentDashboard, AdminDashboard, Dashboard, App)
-
     function TicketDetails({ ticket, onComment, message, setMessage, onUpdate, agents, canAssign }){
       if (!ticket) return <div className="card"><div className="muted">Select a ticket to view details</div></div>;
       const [status, setStatus] = React.useState(ticket.status);
-      const [assignedTo, setAssignedTo] = React.useState(ticket.assignedTo?._id || '');
+      const [assignedTo, setAssignedTo] = React.useState(
+        (ticket.assignedTo && ticket.assignedTo._id) ? ticket.assignedTo._id : ''
+      );
 
       return (
         <div className="card">
@@ -174,13 +175,16 @@
           <hr/>
           <h4>Comments</h4>
           <div className="list">
-            {ticket.comments?.map((c,i)=>(
-              <div key={i} className="ticket">
-                <div className="muted">{new Date(c.createdAt).toLocaleString()}</div>
-                <div>{c.message}</div>
-              </div>
-            ))}
-            {(!ticket.comments || ticket.comments.length===0) && <div className="muted">No comments yet.</div>}
+            {(ticket.comments && ticket.comments.length > 0) ? (
+              ticket.comments.map((c,i)=>(
+                <div key={i} className="ticket">
+                  <div className="muted">{new Date(c.createdAt).toLocaleString()}</div>
+                  <div>{c.message}</div>
+                </div>
+              ))
+            ) : (
+              <div className="muted">No comments yet.</div>
+            )}
           </div>
           <div className="row" style={{marginTop:'.5rem'}}>
             <input className="col" placeholder="Write a comment..." value={message} onChange={e=>setMessage(e.target.value)} />
@@ -190,7 +194,7 @@
       );
     }
 
-    // (keep rest of CustomerDashboard, AgentDashboard, AdminDashboard, Dashboard as in your original file — no shorthand fragments used there)
+    // (keep rest of dashboards unchanged)
 
     function App(){
       const { user, setUser } = useAuth();
