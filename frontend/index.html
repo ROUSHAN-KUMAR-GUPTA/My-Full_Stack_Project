@@ -45,6 +45,7 @@
       return { user, setUser };
     };
 
+    // ---------------- Login ----------------
     function Login({ onLoggedIn }) {
       const [email,setEmail] = React.useState('customer@mandodesk.dev');
       const [password,setPassword] = React.useState('customer123');
@@ -96,13 +97,14 @@
             </div>
           </form>
           <div className="muted" style={{marginTop:'.5rem'}}>
-            Seeded users (after npm run seed:users):<br/>
+            Seeded users:<br/>
             admin@mandodesk.dev / admin123 • agent@mandodesk.dev / agent123 • customer@mandodesk.dev / customer123
           </div>
         </div>
       );
     }
 
+    // ---------------- Ticket List ----------------
     function TicketList({ title, tickets, onOpen }){
       return (
         <div className="card">
@@ -117,10 +119,9 @@
                   <div>
                     <strong>{t.title}</strong> <span className="badge">{t.status}</span> <span className="badge">{t.priority}</span>
                     <div className="muted">
-                      By {(t.createdBy && t.createdBy.name) ? t.createdBy.name : 'Unknown'}
-                      {t.assignedTo ? (
-                        <React.Fragment> • Assigned to {t.assignedTo.name}</React.Fragment>
-                      ) : null}
+                      By {(t.createdBy && t.createdBy.name) || 'Unknown'} {t.assignedTo && (
+                        <React.Fragment>• Assigned to {t.assignedTo.name}</React.Fragment>
+                      )}
                     </div>
                   </div>
                   <button onClick={()=>onOpen(t._id)}>Open</button>
@@ -133,12 +134,11 @@
       );
     }
 
+    // ---------------- Ticket Details ----------------
     function TicketDetails({ ticket, onComment, message, setMessage, onUpdate, agents, canAssign }){
       if (!ticket) return <div className="card"><div className="muted">Select a ticket to view details</div></div>;
       const [status, setStatus] = React.useState(ticket.status);
-      const [assignedTo, setAssignedTo] = React.useState(
-        (ticket.assignedTo && ticket.assignedTo._id) ? ticket.assignedTo._id : ''
-      );
+      const [assignedTo, setAssignedTo] = React.useState(ticket.assignedTo?._id || '');
 
       return (
         <div className="card">
@@ -175,16 +175,14 @@
           <hr/>
           <h4>Comments</h4>
           <div className="list">
-            {(ticket.comments && ticket.comments.length > 0) ? (
+            {ticket.comments && ticket.comments.length > 0 ? (
               ticket.comments.map((c,i)=>(
                 <div key={i} className="ticket">
                   <div className="muted">{new Date(c.createdAt).toLocaleString()}</div>
                   <div>{c.message}</div>
                 </div>
               ))
-            ) : (
-              <div className="muted">No comments yet.</div>
-            )}
+            ) : <div className="muted">No comments yet.</div>}
           </div>
           <div className="row" style={{marginTop:'.5rem'}}>
             <input className="col" placeholder="Write a comment..." value={message} onChange={e=>setMessage(e.target.value)} />
@@ -194,8 +192,46 @@
       );
     }
 
-    // (keep rest of dashboards unchanged)
+    // ---------------- Dashboards ----------------
+    function CustomerDashboard({ onLogout }) {
+      return (
+        <div className="card">
+          <h2>Customer Dashboard</h2>
+          <p className="muted">Welcome, you can create and view your tickets here.</p>
+          <button onClick={onLogout}>Logout</button>
+        </div>
+      );
+    }
 
+    function AgentDashboard({ onLogout }) {
+      return (
+        <div className="card">
+          <h2>Agent Dashboard</h2>
+          <p className="muted">View and manage tickets assigned to you.</p>
+          <button onClick={onLogout}>Logout</button>
+        </div>
+      );
+    }
+
+    function AdminDashboard({ onLogout }) {
+      return (
+        <div className="card">
+          <h2>Admin Dashboard</h2>
+          <p className="muted">Manage all tickets and users.</p>
+          <button onClick={onLogout}>Logout</button>
+        </div>
+      );
+    }
+
+    function Dashboard({ user, onLogout }) {
+      if (!user) return null;
+      if (user.role === "customer") return <CustomerDashboard onLogout={onLogout} />;
+      if (user.role === "agent") return <AgentDashboard onLogout={onLogout} />;
+      if (user.role === "admin") return <AdminDashboard onLogout={onLogout} />;
+      return <div className="card">Unknown role</div>;
+    }
+
+    // ---------------- App ----------------
     function App(){
       const { user, setUser } = useAuth();
       if (!user) return <Login onLoggedIn={setUser} />;
