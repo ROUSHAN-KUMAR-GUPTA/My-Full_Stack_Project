@@ -27,13 +27,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/users', userRoutes);
 
-// Serve static frontend
+// ✅ Serve static frontend
 app.use(express.static(path.join(__dirname, 'frontend')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
-// DB + start
+// ✅ Connect DB + start server
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mandodesk';
 mongoose.connect(MONGODB_URI).then(() => {
   console.log('✅ MongoDB connected');
