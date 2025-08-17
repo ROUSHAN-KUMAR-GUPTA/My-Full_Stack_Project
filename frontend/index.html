@@ -1,244 +1,180 @@
-<!doctype html>
-<html lang="en"> 
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MandoDesk</title>
-  <link rel="stylesheet" href="https://unpkg.com/modern-css-reset/dist/reset.min.css">
-  <style>
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0b1020; color:#e7e7ea; }
-    .container { max-width: 1200px; margin: 2rem auto; padding: 1rem; }
-    .card { background:#121933; border:1px solid #1d274a; border-radius:16px; padding:1rem; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
-    input, textarea, select { width:100%; background:#0e1630; color:#e7e7ea; border:1px solid #25305a; border-radius:10px; padding:.7rem; }
-    button { background:#4f46e5; color:white; border:none; border-radius:12px; padding:.7rem 1rem; cursor:pointer; }
-    button.secondary { background:#25305a; }
-    .row { display:flex; gap:1rem; }
-    .col { flex:1; }
-    .muted { color:#97a0c3; font-size:.9rem; }
-    .badge { padding:.25rem .5rem; border-radius:999px; background:#25305a; font-size:.8rem; }
-    .list { display:grid; gap:.75rem; margin-top:.75rem; }
-    .ticket { border:1px solid #25305a; border-radius:12px; padding:.75rem; background:#0e1630; }
-    .flex { display:flex; align-items:center; gap:.5rem; }
-    .space { display:flex; justify-content:space-between; align-items:center; gap:1rem; }
-    a.link { color:#a5b4fc; text-decoration:none; }
-    a.link:hover { text-decoration:underline; }
-    .grid-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .stat { text-align:center; padding:1rem; background:#0e1630; border:1px solid #25305a; border-radius:12px; }
-    hr { border: none; border-top: 1px solid #25305a; margin: 1rem 0; }
-  </style>
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 800px; margin: 40px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { text-align: center; }
+    input, select, button { padding: 8px; margin: 6px 0; width: 100%; }
+    button { background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    .ticket { border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin: 8px 0; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <div id="root"></div>
-  </div>
+  <div id="root"></div>
+
   <script type="text/babel">
-    const apiBase = '/api';
-    const getToken = () => localStorage.getItem('token');
-    const setToken = (t) => localStorage.setItem('token', t);
-    const getUser = () => JSON.parse(localStorage.getItem('user') || 'null');
 
-    const useAuth = () => {
-      const [user, setUser] = React.useState(getUser());
-      return { user, setUser };
-    };
+    // ✅ Login Component
+    function Login({ onLogin }) {
+      const [email, setEmail] = React.useState("");
+      const [password, setPassword] = React.useState("");
+      const [error, setError] = React.useState("");
 
-    // ---------------- Login ----------------
-    function Login({ onLoggedIn }) {
-      const [email,setEmail] = React.useState('customer@mandodesk.dev');
-      const [password,setPassword] = React.useState('customer123');
-      const [name,setName] = React.useState('Demo Customer');
-      const [mode,setMode] = React.useState('login');
-      const [role,setRole] = React.useState('customer');
-      const [loading,setLoading] = React.useState(false);
-      const [err,setErr] = React.useState('');
-
-      const submit = async (e) => {
-        e.preventDefault();
-        setLoading(true); setErr('');
+      const handleLogin = async () => {
         try {
-          if (mode==='register') {
-            await fetch(apiBase+'/auth/register',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name,email,password, role})});
-          }
-          const res = await fetch(apiBase+'/auth/login',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,password})});
+          const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+          });
           const data = await res.json();
-          if (!res.ok) throw new Error(data.message || 'Login failed');
-          setToken(data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          onLoggedIn(data.user);
-        } catch(e){ setErr(e.message); }
-        setLoading(false);
+          if (res.ok) {
+            onLogin(data.user, data.token);
+          } else {
+            setError(data.message || "Login failed");
+          }
+        } catch (err) {
+          setError("Server error");
+        }
       };
 
       return (
-        <div className="card">
-          <h2>MandoDesk — {mode==='login' ? 'Login' : 'Register'}</h2>
-          <p className="muted">Use seeded accounts or create your own.</p>
-          <form onSubmit={submit} className="list">
-            {mode==='register' && (
-              <React.Fragment>
-                <input placeholder="Full name" value={name} onChange={e=>setName(e.target.value)} />
-                <select value={role} onChange={e=>setRole(e.target.value)}>
-                  <option value="customer">Customer</option>
-                  <option value="agent">Agent</option>
-                </select>
-              </React.Fragment>
-            )}
-            <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-            <input placeholder="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
-            {err && <div className="muted" style={{color:'#ffb4b4'}}>{err}</div>}
-            <div className="space">
-              <button disabled={loading}>{loading?'Please wait...':'Submit'}</button>
-              <button type="button" className="secondary" onClick={()=>setMode(mode==='login'?'register':'login')}>
-                {mode==='login'?'Create account':'Have an account? Login'}
-              </button>
+        <div className="container">
+          <h1>MandoDesk Login</h1>
+          <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
+          <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} />
+          <button onClick={handleLogin}>Login</button>
+          {error && <p style={{color:"red"}}>{error}</p>}
+        </div>
+      );
+    }
+
+    // ✅ Tickets Component (reusable)
+    function Tickets({ tickets, onUpdate }) {
+      return (
+        <div>
+          <h2>Tickets</h2>
+          {tickets.map(t => (
+            <div key={t._id} className="ticket">
+              <p><b>{t.title}</b></p>
+              <p>Status: {t.status}</p>
+              {onUpdate && (
+                <button onClick={()=>onUpdate(t._id)}>Mark Resolved</button>
+              )}
             </div>
-          </form>
-          <div className="muted" style={{marginTop:'.5rem'}}>
-            Seeded users:<br/>
-            admin@mandodesk.dev / admin123 • agent@mandodesk.dev / agent123 • customer@mandodesk.dev / customer123
-          </div>
+          ))}
         </div>
       );
     }
 
-    // ---------------- Ticket List ----------------
-    function TicketList({ title, tickets, onOpen }){
-      return (
-        <div className="card">
-          <div className="space">
-            <h2>{title}</h2>
-            <span className="badge">{tickets.length} tickets</span>
-          </div>
-          <div className="list">
-            {tickets.map(t => (
-              <div key={t._id} className="ticket">
-                <div className="space">
-                  <div>
-                    <strong>{t.title}</strong> <span className="badge">{t.status}</span> <span className="badge">{t.priority}</span>
-                    <div className="muted">
-                      By {(t.createdBy && t.createdBy.name) || 'Unknown'} {t.assignedTo && (
-                        <React.Fragment>• Assigned to {t.assignedTo.name}</React.Fragment>
-                      )}
-                    </div>
-                  </div>
-                  <button onClick={()=>onOpen(t._id)}>Open</button>
-                </div>
-              </div>
-            ))}
-            {tickets.length===0 && <div className="muted">No tickets yet.</div>}
-          </div>
-        </div>
-      );
-    }
+    // ✅ Customer Dashboard
+    function CustomerDashboard({ token }) {
+      const [title, setTitle] = React.useState("");
+      const [tickets, setTickets] = React.useState([]);
 
-    // ---------------- Ticket Details ----------------
-    function TicketDetails({ ticket, onComment, message, setMessage, onUpdate, agents, canAssign }){
-      if (!ticket) return <div className="card"><div className="muted">Select a ticket to view details</div></div>;
-      const [status, setStatus] = React.useState(ticket.status);
-      const [assignedTo, setAssignedTo] = React.useState(ticket.assignedTo?._id || '');
+      const fetchTickets = async () => {
+        const res = await fetch("/api/tickets", { headers: { Authorization: `Bearer ${token}` } });
+        setTickets(await res.json());
+      };
+
+      const createTicket = async () => {
+        await fetch("/api/tickets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ title })
+        });
+        setTitle("");
+        fetchTickets();
+      };
+
+      React.useEffect(fetchTickets, []);
 
       return (
-        <div className="card">
-          <div className="space">
-            <div>
-              <h3>{ticket.title}</h3>
-              <div className="muted">{ticket.description}</div>
-            </div>
-            <div className="flex">
-              <span className="badge">{ticket.status}</span>
-              <span className="badge">{ticket.priority}</span>
-            </div>
-          </div>
-          {canAssign && (
-            <div className="row" style={{marginTop:'.75rem'}}>
-              <div className="col">
-                <label className="muted">Status</label>
-                <select value={status} onChange={e=>setStatus(e.target.value)}>
-                  <option>Open</option><option>In Progress</option><option>Resolved</option><option>Closed</option>
-                </select>
-              </div>
-              <div className="col">
-                <label className="muted">Assign to</label>
-                <select value={assignedTo} onChange={e=>setAssignedTo(e.target.value)}>
-                  <option value="">— Unassigned —</option>
-                  {agents.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
-                </select>
-              </div>
-              <div className="col" style={{display:'flex', alignItems:'flex-end'}}>
-                <button onClick={()=>onUpdate(ticket._id, { status, assignedTo: assignedTo || undefined })}>Update</button>
-              </div>
-            </div>
-          )}
-          <hr/>
-          <h4>Comments</h4>
-          <div className="list">
-            {ticket.comments && ticket.comments.length > 0 ? (
-              ticket.comments.map((c,i)=>(
-                <div key={i} className="ticket">
-                  <div className="muted">{new Date(c.createdAt).toLocaleString()}</div>
-                  <div>{c.message}</div>
-                </div>
-              ))
-            ) : <div className="muted">No comments yet.</div>}
-          </div>
-          <div className="row" style={{marginTop:'.5rem'}}>
-            <input className="col" placeholder="Write a comment..." value={message} onChange={e=>setMessage(e.target.value)} />
-            <button onClick={onComment}>Send</button>
-          </div>
+        <div className="container">
+          <h1>Customer Dashboard</h1>
+          <input placeholder="New Ticket Title" value={title} onChange={e=>setTitle(e.target.value)} />
+          <button onClick={createTicket}>Create Ticket</button>
+          <Tickets tickets={tickets} />
         </div>
       );
     }
 
-    // ---------------- Dashboards ----------------
-    function CustomerDashboard({ onLogout }) {
+    // ✅ Agent Dashboard
+    function AgentDashboard({ token }) {
+      const [tickets, setTickets] = React.useState([]);
+
+      const fetchTickets = async () => {
+        const res = await fetch("/api/tickets", { headers: { Authorization: `Bearer ${token}` } });
+        setTickets(await res.json());
+      };
+
+      const markResolved = async (id) => {
+        await fetch(`/api/tickets/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status: "Resolved" })
+        });
+        fetchTickets();
+      };
+
+      React.useEffect(fetchTickets, []);
+
       return (
-        <div className="card">
-          <h2>Customer Dashboard</h2>
-          <p className="muted">Welcome, you can create and view your tickets here.</p>
-          <button onClick={onLogout}>Logout</button>
+        <div className="container">
+          <h1>Agent Dashboard</h1>
+          <Tickets tickets={tickets} onUpdate={markResolved} />
         </div>
       );
     }
 
-    function AgentDashboard({ onLogout }) {
+    // ✅ Admin Dashboard
+    function AdminDashboard({ token }) {
+      const [tickets, setTickets] = React.useState([]);
+
+      const fetchTickets = async () => {
+        const res = await fetch("/api/tickets", { headers: { Authorization: `Bearer ${token}` } });
+        setTickets(await res.json());
+      };
+
+      React.useEffect(fetchTickets, []);
+
       return (
-        <div className="card">
-          <h2>Agent Dashboard</h2>
-          <p className="muted">View and manage tickets assigned to you.</p>
-          <button onClick={onLogout}>Logout</button>
+        <div className="container">
+          <h1>Admin Dashboard</h1>
+          <Tickets tickets={tickets} />
         </div>
       );
     }
 
-    function AdminDashboard({ onLogout }) {
-      return (
-        <div className="card">
-          <h2>Admin Dashboard</h2>
-          <p className="muted">Manage all tickets and users.</p>
-          <button onClick={onLogout}>Logout</button>
-        </div>
+    // ✅ Dashboard Switcher
+    function Dashboard({ user, token }) {
+      if (user.role === "admin") return <AdminDashboard token={token} />;
+      if (user.role === "agent") return <AgentDashboard token={token} />;
+      return <CustomerDashboard token={token} />;
+    }
+
+    // ✅ Root App
+    function App() {
+      const [user, setUser] = React.useState(null);
+      const [token, setToken] = React.useState(null);
+
+      return user && token ? (
+        <Dashboard user={user} token={token} />
+      ) : (
+        <Login onLogin={(u,t)=>{ setUser(u); setToken(t); }} />
       );
     }
 
-    function Dashboard({ user, onLogout }) {
-      if (!user) return null;
-      if (user.role === "customer") return <CustomerDashboard onLogout={onLogout} />;
-      if (user.role === "agent") return <AgentDashboard onLogout={onLogout} />;
-      if (user.role === "admin") return <AdminDashboard onLogout={onLogout} />;
-      return <div className="card">Unknown role</div>;
-    }
-
-    // ---------------- App ----------------
-    function App(){
-      const { user, setUser } = useAuth();
-      if (!user) return <Login onLoggedIn={setUser} />;
-      return <Dashboard user={user} onLogout={()=>setUser(null)} />;
-    }
-
-    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App/>);
   </script>
 </body>
 </html>
