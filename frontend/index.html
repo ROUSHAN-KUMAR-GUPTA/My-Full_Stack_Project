@@ -8,21 +8,19 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
   <style>
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f7f7f7; }
-    .wrap { max-width: 900px; margin: 24px auto; padding: 16px; background:#fff; border:1px solid #e5e5e5; border-radius: 10px; }
+    body { margin:0; font-family: system-ui, Arial, sans-serif; background:#f7f7f7; }
+    .wrap { max-width: 900px; margin: 24px auto; padding: 16px; background:#fff; border:1px solid #ddd; border-radius: 10px; }
     h1 { font-size: 22px; margin: 0 0 12px 0; }
     .row { display:flex; gap:12px; flex-wrap: wrap; }
     .col { flex:1 1 420px; }
     textarea { width:100%; min-height:220px; padding:10px; border:1px solid #ddd; border-radius:8px; font: inherit; }
     input, button { padding:10px; border:1px solid #ddd; border-radius:8px; font: inherit; width:100%; }
-    button { background:#222; color:#fff; cursor:pointer; }
+    button { background:#007bff; color:#fff; cursor:pointer; }
     button:disabled { opacity:.6; cursor:not-allowed; }
-    .help { font-size:12px; color:#666; }
-    .spacer { height: 8px; }
+    .spacer { height: 10px; }
     .muted { color:#666; font-size:13px; }
     .badge { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #ddd; font-size:12px; }
     .right { text-align:right; }
-    .small { font-size:12px; }
   </style>
 </head>
 <body>
@@ -31,66 +29,61 @@
   <script type="text/babel">
     const App = () => {
       const [transcript, setTranscript] = React.useState("");
-      const [prompt, setPrompt] = React.useState("Summarize in concise bullet points. Include action items and decisions.");
+      const [prompt, setPrompt] = React.useState("Summarize in concise bullet points. Include action items.");
       const [summary, setSummary] = React.useState("");
       const [loading, setLoading] = React.useState(false);
-      const [shareEmails, setShareEmails] = React.useState("");
+      const [emails, setEmails] = React.useState("");
       const [subject, setSubject] = React.useState("Meeting Summary");
       const [toast, setToast] = React.useState("");
 
-      function showToast(msg) {
+      const showToast = (msg) => {
         setToast(msg);
         setTimeout(() => setToast(""), 2500);
-      }
+      };
 
       const onFile = (e) => {
-        const f = e.target.files?.[0];
-        if (!f) return;
+        const file = e.target.files?.[0];
+        if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
-          setTranscript(String(ev.target.result || ""));
-        };
-        reader.readAsText(f);
+        reader.onload = (ev) => setTranscript(ev.target.result);
+        reader.readAsText(file);
       };
 
       const generate = async () => {
-        if (!transcript.trim()) {
-          showToast('Please provide a transcript (paste text or upload .txt)');
-          return;
-        }
+        if (!transcript.trim()) return showToast("Please provide a transcript first");
         setLoading(true);
         try {
-          const res = await fetch('/api/summarize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const res = await fetch("/api/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ transcript, prompt })
           });
           const data = await res.json();
-          if (!res.ok) throw new Error(data?.message || 'Failed to summarize');
-          setSummary(data.summary || '');
-          showToast('Summary generated');
-        } catch (e) {
-          showToast(e.message);
+          if (!res.ok) throw new Error(data.message || "Failed to summarize");
+          setSummary(data.summary || "");
+          showToast("Summary generated");
+        } catch (err) {
+          showToast(err.message);
         } finally {
           setLoading(false);
         }
       };
 
       const share = async () => {
-        if (!summary.trim()) { showToast('Nothing to share – generate/edit summary first'); return; }
-        if (!shareEmails.trim()) { showToast('Enter at least one email'); return; }
+        if (!summary.trim()) return showToast("Nothing to share");
+        if (!emails.trim()) return showToast("Enter at least one recipient");
         setLoading(true);
         try {
-          const res = await fetch('/api/share', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ recipients: shareEmails, subject, content: summary })
+          const res = await fetch("/api/share", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recipients: emails, subject, content: summary })
           });
           const data = await res.json();
-          if (!res.ok) throw new Error(data?.message || 'Failed to send email');
-          showToast('Email sent');
-        } catch (e) {
-          showToast(e.message);
+          if (!res.ok) throw new Error(data.message || "Failed to send email");
+          showToast("Email sent");
+        } catch (err) {
+          showToast(err.message);
         } finally {
           setLoading(false);
         }
@@ -98,43 +91,39 @@
 
       return (
         <div className="wrap">
-          <div className="row" style={{alignItems:'center'}}>
-            <div style={{flex:'1 1 auto'}}>
-              <h1>AI Meeting Notes Summarizer</h1>
-              <div className="muted">Upload a transcript or paste text, add an instruction, then generate. Edit before sharing.</div>
-            </div>
+          <div className="row" style={{alignItems:"center"}}>
+            <h1 style={{flex:"1"}}>AI Meeting Notes Summarizer</h1>
             <div><span className="badge">Basic UI</span></div>
           </div>
+          <div className="muted">Upload or paste transcript → add instruction → generate summary → edit → share via email.</div>
 
           <div className="spacer" />
-
           <div className="row">
             <div className="col">
-              <div className="small muted">Transcript (.txt recommended)</div>
-              <input type="file" accept=".txt,.md,.rtf,.text" onChange={onFile} />
-              <div className="spacer" />
-              <textarea placeholder="Paste transcript here..." value={transcript} onChange={e=>setTranscript(e.target.value)} />
+              <div className="muted">Transcript</div>
+              <input type="file" accept=".txt,.md,.rtf" onChange={onFile} />
+              <textarea placeholder="Paste transcript here..." value={transcript} onChange={(e)=>setTranscript(e.target.value)} />
             </div>
             <div className="col">
-              <div className="small muted">Custom Instruction</div>
-              <textarea style={{minHeight:100}} value={prompt} onChange={e=>setPrompt(e.target.value)} />
+              <div className="muted">Custom Instruction</div>
+              <textarea style={{minHeight:100}} value={prompt} onChange={(e)=>setPrompt(e.target.value)} />
               <div className="spacer" />
-              <button onClick={generate} disabled={loading}>{loading ? 'Generating…' : 'Generate Summary'}</button>
+              <button onClick={generate} disabled={loading}>{loading ? "Generating..." : "Generate Summary"}</button>
               <div className="spacer" />
-              <div className="small muted">Generated Summary (editable)</div>
-              <textarea placeholder="Summary will appear here…" value={summary} onChange={e=>setSummary(e.target.value)} />
+              <div className="muted">Generated Summary (editable)</div>
+              <textarea placeholder="Summary will appear here..." value={summary} onChange={(e)=>setSummary(e.target.value)} />
             </div>
           </div>
 
           <div className="spacer" />
           <div className="row">
             <div className="col">
-              <div className="small muted">Recipients (comma-separated)</div>
-              <input placeholder="alice@example.com, bob@company.com" value={shareEmails} onChange={e=>setShareEmails(e.target.value)} />
+              <div className="muted">Recipients (comma-separated)</div>
+              <input placeholder="alice@example.com, bob@company.com" value={emails} onChange={(e)=>setEmails(e.target.value)} />
             </div>
             <div className="col">
-              <div className="small muted">Email Subject</div>
-              <input value={subject} onChange={e=>setSubject(e.target.value)} />
+              <div className="muted">Email Subject</div>
+              <input value={subject} onChange={(e)=>setSubject(e.target.value)} />
             </div>
           </div>
 
@@ -143,15 +132,12 @@
             <button onClick={share} disabled={loading}>Share via Email</button>
           </div>
 
-          {toast && (
-            <div className="spacer" />
-          )}
-          {toast && <div className="small" role="status">{toast}</div>}
+          {toast && <div className="muted">{toast}</div>}
         </div>
       );
     };
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
+    const root = ReactDOM.createRoot(document.getElementById("root"));
     root.render(<App />);
   </script>
 </body>
